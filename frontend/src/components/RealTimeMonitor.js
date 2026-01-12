@@ -81,7 +81,7 @@ const RealTimeMonitor = ({
   const connectWebSocket = useCallback(() => {
     try {
       // Determine WebSocket URL
-      const apiBase = process.env.REACT_APP_API_URL || "http://localhost:8020";
+      const apiBase = process.env.REACT_APP_API_URL || https://green-guard-vl8a.onrender.com";
       const wsProtocol = apiBase.startsWith("https") ? "wss" : "ws";
       const wsHost = apiBase.replace(/^https?:\/\//, "");
 
