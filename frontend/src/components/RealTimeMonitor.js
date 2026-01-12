@@ -1,10 +1,17 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 
 const RealTimeMonitor = ({
   latitude = 40.7128,
   longitude = -74.006,
   onDataUpdate,
 }) => {
+  /* ------------------ STATE ------------------ */
+
   const [realtimeData, setRealtimeData] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
   const [alerts, setAlerts] = useState([]);
@@ -25,7 +32,7 @@ const RealTimeMonitor = ({
 
   const wsRef = useRef(null);
 
-  /* ------------------ Helpers ------------------ */
+  /* ------------------ HELPERS ------------------ */
 
   const getAQIColor = (aqi) => {
     if (aqi <= 50) return "#00ff88";
@@ -76,38 +83,43 @@ const RealTimeMonitor = ({
     return realtimeData;
   };
 
-  /* ------------------ WebSocket ------------------ */
+  /* ------------------ WEBSOCKET ------------------ */
 
   const connectWebSocket = useCallback(() => {
     try {
-      // Determine WebSocket URL
-      const apiBase = process.env.REACT_APP_API_URL || "http://localhost:1000";
-      const wsProtocol = apiBase.startsWith("https") ? "wss" : "ws";
-      const wsHost = apiBase.replace(/^https?:\/\//, "");
+      const API_BASE =
+        import.meta.env.VITE_API_BASE_URL || "http://localhost:8020";
+
+      const WS_BASE = API_BASE.replace(/^http/, "ws");
 
       const ws = new WebSocket(
-        `${wsProtocol}://${wsHost}/ws/realtime-monitoring?latitude=${latitude}&longitude=${longitude}`
+        `${WS_BASE}/ws/realtime-monitoring?latitude=${latitude}&longitude=${longitude}`
       );
 
       wsRef.current = ws;
 
-      ws.onopen = () => setConnectionStatus("connected");
+      ws.onopen = () => {
+        setConnectionStatus("connected");
+        setIsLoading(true);
+      };
 
-      ws.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        if (data.type === "realtime_update") {
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data?.type === "realtime_update") {
           setRealtimeData(data);
           setAlerts(data.alerts || []);
           setIsLoading(false);
         }
       };
 
-      ws.onclose = () => {
-        setConnectionStatus("disconnected");
-        setTimeout(connectWebSocket, 5000);
+      ws.onerror = () => {
+        setConnectionStatus("error");
       };
 
-      ws.onerror = () => setConnectionStatus("error");
+      ws.onclose = () => {
+        setConnectionStatus("disconnected");
+        setTimeout(connectWebSocket, 5000); // auto-reconnect
+      };
     } catch {
       setConnectionStatus("error");
     }
@@ -147,7 +159,9 @@ const RealTimeMonitor = ({
               className="w-3 h-3 rounded-full"
               style={{ backgroundColor: getStatusColor(connectionStatus) }}
             />
-            <span className="text-sm text-neon-cyan">{connectionStatus}</span>
+            <span className="text-sm text-neon-cyan">
+              {connectionStatus}
+            </span>
           </div>
 
           <button
@@ -167,118 +181,14 @@ const RealTimeMonitor = ({
         </div>
       ) : displayData ? (
         <div className="space-y-6">
+          <div className="text-center">
 
-          {/* AQI + WEATHER */}
-          <div className="grid grid-cols-1 md:grid-cols-0 gap-6">
-            <div className="text-center">
-
-              {/* AQI */}
-              <div className="relative mb-4">
-                <div
-                  className="w-24 h-24 rounded-full mx-auto flex items-center justify-center text-2xl font-bold border-4"
-                  style={{
-                    backgroundColor: `${getAQIColor(displayData.aqi?.value || 50)}20`,
-                    borderColor: getAQIColor(displayData.aqi?.value || 50),
-                    color: getAQIColor(displayData.aqi?.value || 50),
-                  }}
-                >
-                  {Math.round(displayData.aqi?.value || 50)}
-                </div>
-                <p className="text-neon-cyan font-semibold">
-                  {displayData.aqi?.status || "Good"}
-                </p>
-              </div>
-
-              {/* WEATHER */}
-              <div className="text-center mb-4">
-                <div className="text-3xl mb-2">
-                  {displayData.weather?.temperature > 25
-                    ? "☀️"
-                    : displayData.weather?.temperature < 15
-                      ? "❄️"
-                      : "⛅"}
-                </div>
-
-                {isEditing ? (
-                  <input
-                    type="number"
-                    value={manualData.temperature}
-                    onChange={(e) =>
-                      updateManualData("temperature", e.target.value)
-                    }
-                    className="bg-transparent text-2xl text-neon-green border-b w-20 text-center"
-                  />
-                ) : (
-                  <div className="text-2xl text-neon-green">
-                    {Math.round(displayData.weather?.temperature || 22)}°C
-                  </div>
-                )}
-
-                <p className="text-neon-cyan text-sm">
-                  {displayData.weather?.description || "Clear sky"}
-                </p>
-              </div>
-
-              {/* METRICS */}
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Humidity</span>
-                  <span>{displayData.weather?.humidity || 65}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Wind</span>
-                  <span>{displayData.weather?.wind_speed || 3.5} m/s</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>PM2.5</span>
-                  <span>{displayData.aqi?.pm25 || 15} μg/m³</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>CO</span>
-                  <span>{displayData.aqi?.co || 250} μg/m³</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>NO₂</span>
-                  <span>{displayData.aqi?.no2 || 15} μg/m³</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>O₃</span>
-                  <span>{displayData.aqi?.o3 || 30} μg/m³</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>SO₂</span>
-                  <span>{displayData.aqi?.so2 || 5} μg/m³</span>
-                </div>
-              </div>
-            </div>
-
-            {/* ALERTS */}
-            {alerts.length > 0 && (
-              <div>
-                <h3 className="text-neon-green font-semibold mb-2">
-                  Alerts
-                </h3>
-                {alerts.map((a, i) => (
-                  <div
-                    key={i}
-                    className="p-3 mb-2 rounded bg-red-500/10 border border-red-500 text-red-400"
-                  >
-                    {a.message}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <p className="text-neon-cyan/70">
-            No data available
-          </p>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default React.memo(RealTimeMonitor);
+            {/* AQI */}
+            <div className="mb-4">
+              <div
+                className="w-24 h-24 mx-auto rounded-full flex items-center justify-center text-2xl font-bold border-4"
+                style={{
+                  color: getAQIColor(displayData.aqi?.value || 50),
+                  borderColor: getAQIColor(displayData.aqi?.value || 50),
+                  backgroundColor: `${getAQIColor(
+                    displayData.aqi?.value
