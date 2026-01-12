@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { aqiAPI } from '../services/api';
 import AirQualityRadarChart from '../components/AirQualityRadarChart';
 import PollutantComparisonChart from '../components/PollutantComparisonChart';
 import TrendAnalysisChart from '../components/TrendAnalysisChart';
@@ -41,12 +41,12 @@ const Analytics = () => {
         const lon = -74.0060;
 
         // Fetch current AQI data
-        const currentResponse = await axios.get(`http://localhost:8020/api/current-aqi?latitude=${lat}&longitude=${lon}`);
-        setCurrentData(currentResponse.data);
+        const currentData = await aqiAPI.getCurrentAQI(lat, lon);
+        setCurrentData(currentData);
 
         // Fetch forecast data
-        const forecastResponse = await axios.get(`http://localhost:8020/api/forecast?latitude=${lat}&longitude=${lon}&days=7`);
-        setForecastData(forecastResponse.data.forecast);
+        const forecastData = await aqiAPI.getForecast(lat, lon, 7);
+        setForecastData(forecastData.forecast);
 
         // Fetch historical data (mock data for now)
         const mockHistoricalData = Array.from({ length: 30 }, (_, i) => ({
@@ -207,11 +207,10 @@ const Analytics = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all ${
-                  activeTab === tab.id
+                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all ${activeTab === tab.id
                     ? 'bg-purple-600 text-white shadow-lg'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 <span>{tab.icon}</span>
                 <span>{tab.label}</span>

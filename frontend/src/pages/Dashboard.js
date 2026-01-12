@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import AQIGaugeChart from '../components/AQIGaugeChart';
 import AirQualityRadarChart from '../components/AirQualityRadarChart';
 import RealTimeMonitor from '../components/RealTimeMonitor';
-import axios from 'axios';
+import { aqiAPI } from '../services/api';
 
 const Dashboard = () => {
   const [currentData, setCurrentData] = useState(null);
@@ -33,10 +33,10 @@ const Dashboard = () => {
         // Mock current location, in real get geolocation
         const lat = 40.7128;
         const lon = -74.0060;
-        const response = await axios.get(`http://localhost:8020/api/current-aqi?latitude=${lat}&longitude=${lon}`);
-        setCurrentData(response.data);
-        const forecastResponse = await axios.get(`http://localhost:8020/api/forecast?latitude=${lat}&longitude=${lon}&days=7`);
-        setForecast(forecastResponse.data.forecast.map((item, index) => ({ day: `Day ${index + 1}`, aqi: item.aqi })));
+        const currentAqiResponse = await aqiAPI.getCurrentAQI(lat, lon);
+        setCurrentData(currentAqiResponse);
+        const forecastResponse = await aqiAPI.getForecast(lat, lon, 7);
+        setForecast(forecastResponse.forecast.map((item, index) => ({ day: `Day ${index + 1}`, aqi: item.aqi })));
       } catch (err) {
         setError('Failed to fetch data');
       }

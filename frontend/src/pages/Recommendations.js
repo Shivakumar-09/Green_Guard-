@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import { aqiAPI } from '../services/api';
 
 const Recommendations = () => {
   const [aqi, setAqi] = useState('');
@@ -20,11 +20,8 @@ const Recommendations = () => {
 
   const getRecommendationsForAQI = useCallback(async (aqiValue) => {
     try {
-      const response = await axios.post('http://localhost:8020/api/recommendations', {
-        aqi: parseFloat(aqiValue),
-        user_type: 'normal'
-      });
-      setRecommendations(response.data);
+      const data = await aqiAPI.getRecommendations(parseFloat(aqiValue), 'normal');
+      setRecommendations(data);
     } catch (error) {
       console.error('Error getting recommendations:', error);
       setRecommendations({ error: 'Failed to get recommendations' });
@@ -37,16 +34,16 @@ const Recommendations = () => {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
-          
+
           // Reverse geocode to get location name
           try {
             const geoResponse = await fetch(
               `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
             );
             const geoData = await geoResponse.json();
-            const locationName = geoData.locality || geoData.city || geoData.principalSubdivision || 
-                               `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`;
-            
+            const locationName = geoData.locality || geoData.city || geoData.principalSubdivision ||
+              `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`;
+
             setCurrentLocation({
               name: locationName,
               lat: latitude,
@@ -55,17 +52,14 @@ const Recommendations = () => {
 
             // Fetch AQI data
             try {
-              const aqiResponse = await axios.get(
-                `http://localhost:8020/api/current-aqi?latitude=${latitude}&longitude=${longitude}`
-              );
-              const data = aqiResponse.data;
+              const data = await aqiAPI.getCurrentAQI(latitude, longitude);
               const breeze = getBreezeLevel(data.wind_speed || 0);
               setCurrentAqiData({
                 ...data,
                 breeze
               });
               setAqi(data.aqi.toString());
-              
+
               // Auto-get recommendations
               await getRecommendationsForAQI(data.aqi);
             } catch (error) {
@@ -80,7 +74,7 @@ const Recommendations = () => {
               lon: longitude
             });
           }
-          
+
           setLocationLoading(false);
         },
         (error) => {
@@ -136,12 +130,10 @@ const Recommendations = () => {
               <span className="mr-3 text-sm font-medium text-gray-700">
                 {manualMode ? 'Manual' : 'Auto'}
               </span>
-              <div className={`relative inline-block w-12 h-6 transition duration-200 ease-in-out rounded-full ${
-                manualMode ? 'bg-gray-300' : 'bg-purple-600'
-              }`}>
-                <span className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ease-in-out ${
-                  manualMode ? 'translate-x-6' : 'translate-x-0'
-                }`}></span>
+              <div className={`relative inline-block w-12 h-6 transition duration-200 ease-in-out rounded-full ${manualMode ? 'bg-gray-300' : 'bg-purple-600'
+                }`}>
+                <span className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ease-in-out ${manualMode ? 'translate-x-6' : 'translate-x-0'
+                  }`}></span>
               </div>
               <input
                 type="checkbox"
@@ -272,10 +264,9 @@ const Recommendations = () => {
                 <div className="bg-gray-50 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-700 mb-3">⚠️ Risk Assessment</h3>
                   <p className="text-2xl font-bold mb-2">
-                    <span className={`${
-                      recommendations.risk_level === 'Low' ? 'text-green-600' :
-                      recommendations.risk_level === 'Medium' ? 'text-yellow-600' : 'text-red-600'
-                    }`}>
+                    <span className={`${recommendations.risk_level === 'Low' ? 'text-green-600' :
+                        recommendations.risk_level === 'Medium' ? 'text-yellow-600' : 'text-red-600'
+                      }`}>
                       {recommendations.risk_level}
                     </span>
                   </p>
