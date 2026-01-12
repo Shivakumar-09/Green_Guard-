@@ -1,3 +1,7 @@
+useEffect(() => {
+  console.log("API BASE FROM VITE:", import.meta.env.VITE_API_BASE_URL);
+}, []);
+
 import React, {
   useState,
   useEffect,
