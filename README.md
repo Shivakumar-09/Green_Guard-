@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # GreenGuard AI
 
 An AI-powered environmental monitoring and pollution prevention system that provides real-time air quality monitoring, 7-day pollution prediction, personalized health recommendations, travel exposure analysis, and child-safety features.
