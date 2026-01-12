@@ -80,8 +80,13 @@ const RealTimeMonitor = ({
 
   const connectWebSocket = useCallback(() => {
     try {
+      // Determine WebSocket URL
+      const apiBase = process.env.REACT_APP_API_URL || "http://localhost:8020";
+      const wsProtocol = apiBase.startsWith("https") ? "wss" : "ws";
+      const wsHost = apiBase.replace(/^https?:\/\//, "");
+
       const ws = new WebSocket(
-        `ws://localhost:8020/ws/realtime-monitoring?latitude=${latitude}&longitude=${longitude}`
+        `${wsProtocol}://${wsHost}/ws/realtime-monitoring?latitude=${latitude}&longitude=${longitude}`
       );
 
       wsRef.current = ws;
