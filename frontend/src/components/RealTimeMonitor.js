@@ -88,7 +88,7 @@ const RealTimeMonitor = ({
   const connectWebSocket = useCallback(() => {
     try {
       const API_BASE =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:8020";
+        import.meta.env.https://green-guard-vl8a.onrender.com || "http://localhost:8020";
 
       const WS_BASE = API_BASE.replace(/^http/, "ws");
 
