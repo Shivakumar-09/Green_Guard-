@@ -6,14 +6,39 @@ import RealTimeMonitor from '../components/RealTimeMonitor';
 import { aqiAPI } from '../services/api';
 
 const Dashboard = () => {
+  const [location, setLocation] = useState(null);
   const [currentData, setCurrentData] = useState(null);
   const [forecast, setForecast] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  // Get User Location on Mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+          });
+        },
+        (err) => {
+          console.error("Location access denied or failed:", err);
+          // Fallback to NYC
+          setLocation({ lat: 40.7128, lon: -74.0060 });
+          setError("Location access denied. Showing default location (NYC).");
+        }
+      );
+    } else {
+      setLocation({ lat: 40.7128, lon: -74.0060 });
+      setError("Geolocation not supported. Showing default location.");
+    }
+  }, []);
+
+  // Fetch Data when Location or Trigger Changes
+  // Handle manual data updates from RealTimeMonitor
   const handleRealtimeDataUpdate = (data) => {
-    // Update current data with manual values
     if (currentData) {
       setCurrentData({
         ...currentData,
@@ -23,30 +48,34 @@ const Dashboard = () => {
         pm25: data.pm25,
         pm10: data.pm10,
         co2: data.co2,
-        aqi: Math.round((data.pm25 * 5 + data.pm10 * 2 + data.co2 * 0.1) / 3) // Simple AQI calculation
+        aqi: Math.round((data.pm25 * 5 + data.pm10 * 2 + data.co2 * 0.1) / 3)
       });
     }
   };
 
   useEffect(() => {
+    if (!location) return;
+
     const fetchData = async () => {
+      setLoading(true);
       try {
-        // Mock current location, in real get geolocation
-        const lat = 40.7128;
-        const lon = -74.0060;
+        const { lat, lon } = location;
         const [currentAqiResponse, forecastResponse] = await Promise.all([
           aqiAPI.getCurrentAQI(lat, lon),
           aqiAPI.getForecast(lat, lon, 7)
         ]);
         setCurrentData(currentAqiResponse);
         setForecast(forecastResponse.forecast.map((item, index) => ({ day: `Day ${index + 1}`, aqi: item.aqi })));
+        setError(null); // Clear previous errors on success
       } catch (err) {
+        console.error(err);
         setError('Failed to fetch data');
       }
       setLoading(false);
     };
+
     fetchData();
-  }, []);
+  }, [location, refreshTrigger]);
 
   const getAqiColor = (aqi) => {
     if (aqi <= 50) return 'text-green-600';
@@ -65,30 +94,13 @@ const Dashboard = () => {
         <div className="flex flex-col md:flex-row justify-between items-center mb-8">
           <div>
             <h1 className="text-4xl font-bold text-gray-800 mb-2">Dashboard</h1>
-            <p className="text-gray-600">Real-time air quality monitoring and forecasting</p>
+            <p className="text-gray-600">
+              Real-time air quality & weather for
+              {location ? ` (${location.lat.toFixed(2)}, ${location.lon.toFixed(2)})` : " locating..."}
+            </p>
           </div>
           <button
-            onClick={() => {
-              setLoading(true);
-              // Re-fetch data
-              const fetchData = async () => {
-                try {
-                  const lat = 40.7128;
-                  const lon = -74.0060;
-                  const [currentAqiResponse, forecastResponse] = await Promise.all([
-                    aqiAPI.getCurrentAQI(lat, lon),
-                    aqiAPI.getForecast(lat, lon, 7)
-                  ]);
-                  setCurrentData(currentAqiResponse);
-                  setForecast(forecastResponse.forecast.map((item, index) => ({ day: `Day ${index + 1}`, aqi: item.aqi })));
-                } catch (err) {
-                  setError('Failed to fetch data');
-                }
-                setLoading(false);
-              };
-              setRefreshTrigger(prev => prev + 1);
-              fetchData();
-            }}
+            onClick={() => setRefreshTrigger(prev => prev + 1)}
             className="mt-4 md:mt-0 bg-white hover:bg-gray-50 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow transition duration-200 flex items-center"
             disabled={loading}
           >
@@ -99,7 +111,14 @@ const Dashboard = () => {
 
         {/* Real-Time Monitor */}
         <div className="mb-8">
-          <RealTimeMonitor latitude={40.7128} longitude={-74.006} onDataUpdate={handleRealtimeDataUpdate} refreshTrigger={refreshTrigger} />
+          {location && (
+            <RealTimeMonitor
+              latitude={location.lat}
+              longitude={location.lon}
+              onDataUpdate={handleRealtimeDataUpdate}
+              refreshTrigger={refreshTrigger}
+            />
+          )}
         </div>
         {loading && (
           <div className="flex justify-center items-center h-64">
