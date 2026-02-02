@@ -47,8 +47,8 @@ const Dashboard = () => {
         wind_speed: data.windSpeed,
         pm25: data.pm25,
         pm10: data.pm10,
-        co2: data.co2,
-        aqi: Math.round((data.pm25 * 5 + data.pm10 * 2 + data.co2 * 0.1) / 3)
+        co2: data.co2 || data.co, // Handle mismatch
+        aqi: Math.round(((data.pm25 || 0) * 5 + (data.pm10 || 0) * 2 + (data.co2 || data.co || 0) * 0.1) / 3)
       });
     }
   };
