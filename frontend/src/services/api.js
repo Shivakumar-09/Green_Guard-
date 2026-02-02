@@ -107,7 +107,9 @@ export const aqiAPI = {
   },
 };
 
-export default {
+const api = {
   ...aqiAPI,
   fetch: fetchWithTimeout
 };
+
+export default api;
