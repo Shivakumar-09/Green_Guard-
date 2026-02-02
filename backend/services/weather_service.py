@@ -14,7 +14,7 @@ def get_weather_data(lat: float, lon: float):
     # Check cache (5 minute cache)
     if cache_key in _cache:
         cached_data, timestamp = _cache[cache_key]
-        if current_time - timestamp < 300:  # 5 minutes
+        if current_time - timestamp < 30:  # 30 seconds
             return cached_data
 
     api_key = os.getenv("OPENWEATHER_API_KEY")

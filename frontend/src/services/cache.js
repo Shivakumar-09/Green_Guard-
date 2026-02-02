@@ -2,7 +2,7 @@
 class APICache {
   constructor() {
     this.cache = new Map();
-    this.ttl = 5 * 60 * 1000; // 5 minutes TTL
+    this.ttl = 30 * 1000; // 30 seconds TTL
   }
 
   set(key, data) {

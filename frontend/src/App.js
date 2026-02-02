@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import Dashboard from './pages/Dashboard';
-import TravelAnalysis from './pages/TravelAnalysis';
-import Recommendations from './pages/Recommendations';
-import Analytics from './pages/Analytics';
 import './index.css';
 import logo from './media/GGAI_logo.png';
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const TravelAnalysis = lazy(() => import('./pages/TravelAnalysis'));
+const Recommendations = lazy(() => import('./pages/Recommendations'));
+const Analytics = lazy(() => import('./pages/Analytics'));
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -66,12 +67,18 @@ function App() {
         </nav>
 
         {/* ROUTES */}
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/travel" element={<TravelAnalysis />} />
-          <Route path="/recommendations" element={<Recommendations />} />
-        </Routes>
+        <Suspense fallback={
+          <div className="flex justify-center items-center h-screen">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+          </div>
+        }>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/travel" element={<TravelAnalysis />} />
+            <Route path="/recommendations" element={<Recommendations />} />
+          </Routes>
+        </Suspense>
 
       </div>
     </Router>

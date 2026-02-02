@@ -13,7 +13,7 @@ def get_current_aqi(lat: float, lon: float):
     # Check cache (15 minute cache for AQI data)
     if cache_key in _cache:
         cached_data, timestamp = _cache[cache_key]
-        if current_time - timestamp < 900:  # 15 minutes
+        if current_time - timestamp < 30:  # 30 seconds
             return cached_data
 
     try:

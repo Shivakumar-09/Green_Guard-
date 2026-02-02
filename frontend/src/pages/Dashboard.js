@@ -33,9 +33,11 @@ const Dashboard = () => {
         // Mock current location, in real get geolocation
         const lat = 40.7128;
         const lon = -74.0060;
-        const currentAqiResponse = await aqiAPI.getCurrentAQI(lat, lon);
+        const [currentAqiResponse, forecastResponse] = await Promise.all([
+          aqiAPI.getCurrentAQI(lat, lon),
+          aqiAPI.getForecast(lat, lon, 7)
+        ]);
         setCurrentData(currentAqiResponse);
-        const forecastResponse = await aqiAPI.getForecast(lat, lon, 7);
         setForecast(forecastResponse.forecast.map((item, index) => ({ day: `Day ${index + 1}`, aqi: item.aqi })));
       } catch (err) {
         setError('Failed to fetch data');

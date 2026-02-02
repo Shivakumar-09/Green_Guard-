@@ -1,20 +1,46 @@
 /**
  * API Service for GreenGuard AI
- * Handles all backend API calls
+ * Handles all backend API calls using native Fetch API
  */
 
-import axios from 'axios';
 import { apiCache } from './cache';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8020';
+const DEFAULT_TIMEOUT = 60000; // 60 seconds
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 10000, // 10 second timeout
-});
+/**
+ * Helper to perform fetch with timeout and error handling
+ */
+const fetchWithTimeout = async (endpoint, options = {}) => {
+  const { timeout = DEFAULT_TIMEOUT, ...fetchOptions } = options;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...fetchOptions,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...fetchOptions.headers,
+      },
+    });
+
+    clearTimeout(id);
+
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    clearTimeout(id);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out');
+    }
+    throw error;
+  }
+};
 
 export const aqiAPI = {
   // Get current AQI for a location
@@ -23,11 +49,11 @@ export const aqiAPI = {
     const cached = apiCache.get(cacheKey);
     if (cached) return cached;
 
-    const response = await api.get('/api/current-aqi', {
-      params: { latitude, longitude },
-    });
-    apiCache.set(cacheKey, response.data);
-    return response.data;
+    const queryParams = new URLSearchParams({ latitude, longitude });
+    const data = await fetchWithTimeout(`/api/current-aqi?${queryParams}`);
+
+    apiCache.set(cacheKey, data);
+    return data;
   },
 
   // Get forecast
@@ -36,51 +62,52 @@ export const aqiAPI = {
     const cached = apiCache.get(cacheKey);
     if (cached) return cached;
 
-    const response = await api.get('/api/forecast', {
-      params: { latitude, longitude, days },
-    });
-    apiCache.set(cacheKey, response.data);
-    return response.data;
-    return response.data;
+    const queryParams = new URLSearchParams({ latitude, longitude, days });
+    const data = await fetchWithTimeout(`/api/forecast?${queryParams}`);
+
+    apiCache.set(cacheKey, data);
+    return data;
   },
 
   // Get recommendations
   getRecommendations: async (aqi, userType) => {
-    const response = await api.post('/api/recommendations', {
-      aqi,
-      user_type: userType,
+    return await fetchWithTimeout('/api/recommendations', {
+      method: 'POST',
+      body: JSON.stringify({
+        aqi,
+        user_type: userType,
+      }),
     });
-    return response.data;
   },
 
   // Calculate travel exposure
   calculateTravelExposure: async (sourceLat, sourceLon, destLat, destLon, travelMode = 'driving') => {
-    const response = await api.post('/api/travel-exposure', {
-      source_lat: sourceLat,
-      source_lon: sourceLon,
-      dest_lat: destLat,
-      dest_lon: destLon,
-      travel_mode: travelMode,
+    return await fetchWithTimeout('/api/travel-exposure', {
+      method: 'POST',
+      body: JSON.stringify({
+        source_lat: sourceLat,
+        source_lon: sourceLon,
+        dest_lat: destLat,
+        dest_lon: destLon,
+        travel_mode: travelMode,
+      }),
     });
-    return response.data;
   },
 
   // Get historical data (last 6 months)
   getHistoricalData: async (latitude, longitude) => {
-    const response = await api.get('/api/historical', {
-      params: { latitude, longitude },
-    });
-    return response.data;
+    const queryParams = new URLSearchParams({ latitude, longitude });
+    return await fetchWithTimeout(`/api/historical?${queryParams}`);
   },
 
   // Geocode location name to coordinates
   geocodeLocation: async (locationName) => {
-    const response = await api.get('/api/geocode', {
-      params: { location: locationName },
-    });
-    return response.data;
+    const queryParams = new URLSearchParams({ location: locationName });
+    return await fetchWithTimeout(`/api/geocode?${queryParams}`);
   },
 };
 
-export default api;
-
+export default {
+  ...aqiAPI,
+  fetch: fetchWithTimeout
+};
