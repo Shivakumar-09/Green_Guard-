@@ -150,7 +150,7 @@ const Dashboard = () => {
                   <span className="text-2xl">🌡️</span>
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-700">CO₂ Level</h2>
+                  <h2 className="text-lg font-semibold text-gray-700">CO Level</h2>
                   <p className="text-sm text-gray-500">Parts per million</p>
                 </div>
               </div>
