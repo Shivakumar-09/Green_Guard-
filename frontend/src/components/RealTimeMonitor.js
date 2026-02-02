@@ -4,6 +4,7 @@ const RealTimeMonitor = ({
   latitude = 40.7128,
   longitude = -74.006,
   onDataUpdate,
+  refreshTrigger = 0,
 }) => {
   const [realtimeData, setRealtimeData] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
@@ -104,7 +105,8 @@ const RealTimeMonitor = ({
 
       ws.onclose = () => {
         setConnectionStatus("disconnected");
-        setTimeout(connectWebSocket, 5000);
+        // Only reconnect if not intentionally closed/refreshed
+        // But for simplicity, we allow the hook to handle re-mounting
       };
 
       ws.onerror = () => setConnectionStatus("error");
@@ -114,9 +116,13 @@ const RealTimeMonitor = ({
   }, [latitude, longitude]);
 
   useEffect(() => {
+    setRealtimeData(null); // Reset data on force refresh
+    setIsLoading(true);
     connectWebSocket();
-    return () => wsRef.current?.close();
-  }, [connectWebSocket]);
+    return () => {
+      wsRef.current?.close();
+    };
+  }, [connectWebSocket, refreshTrigger]);
 
   const displayData = getDisplayData();
 
@@ -150,12 +156,25 @@ const RealTimeMonitor = ({
             <span className="text-sm text-neon-cyan">{connectionStatus}</span>
           </div>
 
-          <button
-            onClick={toggleMode}
-            className="px-3 py-1 rounded-full text-xs bg-neon-cyan/20 text-neon-cyan border"
-          >
-            {isEditing ? "Real-Time Mode" : "Manual Mode"}
-          </button>
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => {
+                setRealtimeData(null);
+                setIsLoading(true);
+                connectWebSocket();
+              }}
+              className="px-3 py-1 rounded-full text-xs bg-neon-green/20 text-neon-green border hover:bg-neon-green/30 transition"
+              title="Force Refresh Data"
+            >
+              🔄 Refresh
+            </button>
+            <button
+              onClick={toggleMode}
+              className="px-3 py-1 rounded-full text-xs bg-neon-cyan/20 text-neon-cyan border hover:bg-neon-cyan/30 transition"
+            >
+              {isEditing ? "Real-Time Mode" : "Manual Mode"}
+            </button>
+          </div>
         </div>
       </div>
 

@@ -10,6 +10,7 @@ const Dashboard = () => {
   const [forecast, setForecast] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleRealtimeDataUpdate = (data) => {
     // Update current data with manual values
@@ -61,14 +62,44 @@ const Dashboard = () => {
         </div>
       )}
       <div className="container mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Dashboard</h1>
-          <p className="text-gray-600">Real-time air quality monitoring and forecasting</p>
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-800 mb-2">Dashboard</h1>
+            <p className="text-gray-600">Real-time air quality monitoring and forecasting</p>
+          </div>
+          <button
+            onClick={() => {
+              setLoading(true);
+              // Re-fetch data
+              const fetchData = async () => {
+                try {
+                  const lat = 40.7128;
+                  const lon = -74.0060;
+                  const [currentAqiResponse, forecastResponse] = await Promise.all([
+                    aqiAPI.getCurrentAQI(lat, lon),
+                    aqiAPI.getForecast(lat, lon, 7)
+                  ]);
+                  setCurrentData(currentAqiResponse);
+                  setForecast(forecastResponse.forecast.map((item, index) => ({ day: `Day ${index + 1}`, aqi: item.aqi })));
+                } catch (err) {
+                  setError('Failed to fetch data');
+                }
+                setLoading(false);
+              };
+              setRefreshTrigger(prev => prev + 1);
+              fetchData();
+            }}
+            className="mt-4 md:mt-0 bg-white hover:bg-gray-50 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow transition duration-200 flex items-center"
+            disabled={loading}
+          >
+            <span className={`mr-2 ${loading ? 'animate-spin' : ''}`}>🔄</span>
+            {loading ? 'Refreshing...' : 'Refresh Data'}
+          </button>
         </div>
 
         {/* Real-Time Monitor */}
         <div className="mb-8">
-          <RealTimeMonitor latitude={40.7128} longitude={-74.006} onDataUpdate={handleRealtimeDataUpdate} />
+          <RealTimeMonitor latitude={40.7128} longitude={-74.006} onDataUpdate={handleRealtimeDataUpdate} refreshTrigger={refreshTrigger} />
         </div>
         {loading && (
           <div className="flex justify-center items-center h-64">
